@@ -10,27 +10,28 @@ const PORT = 8000;
 
 const stripe = require("stripe")(process.env.STRIPE_KEY);
 app.post("/create-checkout-session", async (req, res) => {
-  const data = req.body.data;
-  let amount = data.amount;
-  const session = await stripe.checkout.sessions.create({
-    line_items: [
-      {
-        price_data: {
-          currency: "inr",
-          product_data: {
-            name: "Donation",
-          },
-          unit_amount: amount,
-        },
-        quantity: 1,
+  const { products } = req.body;
+  // console.log(products);
+  const lineItems = products.map((product) => ({
+    price_data: {
+      currency: "usd",
+      product_data: {
+        name: product.title,
       },
-    ],
+      unit_amount: product.price * 100,
+    },
+    quantity: product.count,
+  }));
+  console.log(lineItems);
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: lineItems,
     mode: "payment",
     success_url: `${process.env.CLIENT_URL}`,
     cancel_url: `${process.env.CLIENT_URL}`,
   });
-  console.log(session);
-  res.send({ url: session.url });
+  res.json({ id: session.id });
 });
 
 app.listen(PORT, () => {
